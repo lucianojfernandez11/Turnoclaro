@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+.DS_Store
+.demo-cargada
+env-inicial.txt
+inicio.log

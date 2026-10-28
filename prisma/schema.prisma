@@ -1,0 +1,281 @@
+// TurnoClaro · modelo de datos
+// Todas las tablas de un consultorio llevan clinicId: así se aísla cada cliente.
+// Fechas en UTC (timestamptz); se muestran en la zona horaria del consultorio.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SECRETARIA
+  PROFESIONAL
+}
+
+enum AppointmentStatus {
+  SOLICITADO // reserva online esperando que la secretaría la acepte
+  PENDIENTE // dado desde el panel, sin confirmar por el paciente
+  CONFIRMADO
+  ATENDIDO
+  AUSENTE
+  CANCELADO
+}
+
+enum AppointmentSource {
+  PANEL
+  ONLINE
+}
+
+enum MessageStatus {
+  ENVIADO
+  ENTREGADO
+  LEIDO
+  FALLIDO
+  MANUAL
+}
+
+enum ReminderReply {
+  CONFIRMA
+  CANCELA
+}
+
+model Clinic {
+  id                      String    @id @default(cuid())
+  name                    String
+  slug                    String    @unique
+  address                 String?
+  phone                   String?
+  defaultAreaCode         String    @default("381")
+  timezone                String    @default("America/Argentina/Tucuman")
+  reminderTemplate        String?
+  hideSpecialtyInMessages Boolean   @default(false)
+  bookingEnabled          Boolean   @default(true)
+  bookingAutoConfirm      Boolean   @default(false)
+  bookingDaysAhead        Int       @default(14)
+  plan                    String    @default("PRUEBA")
+  trialEndsAt             DateTime? @db.Timestamptz(3)
+  active                  Boolean   @default(true)
+  // WhatsApp automático. MANUAL: la secretaría envía con un toque (gratis).
+  // PROPIA: el consultorio conecta su cuenta de Meta y Meta le cobra a él.
+  // PACK: se usa la cuenta de TurnoClaro y se descuenta del saldo comprado.
+  waMode                  String    @default("MANUAL")
+  waPhoneNumberId         String?   @unique
+  waTokenEnc              String? // cifrado con SECRETS_KEY
+  waAppSecretEnc          String? // cifrado con SECRETS_KEY
+  waVerifyToken           String?   @unique
+  waTemplateName          String?
+  waTemplateLang          String?
+  reminderCredits         Int       @default(0)
+  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+
+  memberships   Membership[]
+  sessions      Session[]
+  professionals Professional[]
+  schedules     Schedule[]
+  blocks        Block[]
+  insurances    Insurance[]
+  patients      Patient[]
+  appointments  Appointment[]
+  messages      Message[]
+  auditLogs     AuditLog[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  isSuperadmin Boolean   @default(false)
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime? @db.Timestamptz(3)
+  lastLoginAt  DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  memberships Membership[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
+}
+
+model Membership {
+  id             String  @id @default(cuid())
+  userId         String
+  clinicId       String
+  role           Role
+  // Si el usuario además atiende, se vincula a su ficha de profesional.
+  professionalId String? @unique
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  professional Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clinicId])
+}
+
+model Session {
+  id        String   @id // hash SHA-256 del token de la cookie
+  userId    String
+  clinicId  String
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Professional {
+  id          String   @id @default(cuid())
+  clinicId    String
+  name        String
+  specialty   String
+  color       String   @default("#1f6b5c")
+  slotMinutes Int      @default(20)
+  bookable    Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  schedules    Schedule[]
+  blocks       Block[]
+  appointments Appointment[]
+  membership   Membership?
+
+  @@index([clinicId])
+}
+
+// Horario semanal: weekday 1 = lunes … 7 = domingo; minutos desde las 00:00.
+model Schedule {
+  id             String @id @default(cuid())
+  clinicId       String
+  professionalId String
+  weekday        Int
+  startMinute    Int
+  endMinute      Int
+
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId])
+}
+
+// Bloqueo de agenda. Sin professionalId = todo el consultorio (feriado, cierre).
+model Block {
+  id             String   @id @default(cuid())
+  clinicId       String
+  professionalId String?
+  startsAt       DateTime @db.Timestamptz(3)
+  endsAt         DateTime @db.Timestamptz(3)
+  reason         String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  professional Professional? @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, startsAt])
+}
+
+model Insurance {
+  id       String  @id @default(cuid())
+  clinicId String
+  name     String
+  active   Boolean @default(true)
+
+  clinic   Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patients Patient[]
+
+  @@unique([clinicId, name])
+}
+
+model Patient {
+  id              String    @id @default(cuid())
+  clinicId        String
+  fullName        String
+  dni             String?
+  phone           String
+  email           String?
+  insuranceId     String?
+  affiliateNumber String?
+  whatsappOptIn   Boolean   @default(true)
+  notes           String?
+  deletedAt       DateTime? @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  insurance    Insurance?    @relation(fields: [insuranceId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+
+  @@unique([clinicId, dni])
+  @@index([clinicId, fullName])
+  @@index([clinicId, phone])
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  clinicId       String
+  professionalId String
+  patientId      String
+  startsAt       DateTime          @db.Timestamptz(3)
+  endsAt         DateTime          @db.Timestamptz(3)
+  status         AppointmentStatus @default(PENDIENTE)
+  source         AppointmentSource @default(PANEL)
+  overbook       Boolean           @default(false)
+  note           String?
+  // Token del link que recibe el paciente para confirmar o cancelar.
+  publicToken    String            @unique
+  createdById    String?
+  cancelledAt    DateTime?         @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+
+  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@index([clinicId, startsAt])
+  @@index([professionalId, startsAt])
+}
+
+model Message {
+  id            String         @id @default(cuid())
+  clinicId      String
+  appointmentId String
+  kind          String // RECORDATORIO | RESERVA | CAMBIO
+  channel       String // API | MANUAL
+  status        MessageStatus
+  toPhone       String
+  waMessageId   String?        @unique
+  error         String?
+  reply         ReminderReply?
+  repliedAt     DateTime?      @db.Timestamptz(3)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+
+  clinic      Clinic      @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@index([toPhone, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  clinicId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  detail    Json?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+}
