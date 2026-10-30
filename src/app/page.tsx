@@ -1,7 +1,7 @@
 import type React from "react";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { BRAND, PLANS, salesWhatsappLink, WHATSAPP_EXTRAS } from "@/lib/brand";
+import { BRAND, DEV, PLANS, pricePerReminder, salesWhatsappLink, WHATSAPP_EXTRAS } from "@/lib/brand";
 import { Icon, Logo } from "@/components/icons";
 import { Glass } from "@/components/glass";
 import { PatientFeed } from "@/components/patient-feed";
@@ -114,9 +114,14 @@ export default async function Home() {
                   <h3>{p.name}</h3>
                   <p className="muted">{p.who}</p>
                 </div>
-                <p className="price">
-                  ${p.price} <small>/ mes</small>
-                </p>
+                <div className="price-box">
+                  <p className="price">
+                    ${p.price} <small>/ mes</small>
+                  </p>
+                  <p className="price-note">
+                    {p.perPro ? <>Sale <b>${p.perPro}</b> por profesional · </> : null}más IVA
+                  </p>
+                </div>
                 <p className="plan-pitch">{p.pitch}</p>
                 <ul>
                   {p.features.map((f, j) => (
@@ -125,6 +130,14 @@ export default async function Home() {
                     </li>
                   ))}
                 </ul>
+                <a
+                  className="plan-cta"
+                  href={signup ? "/registro" : salesWhatsappLink(`Hola! Quiero el plan ${p.name} de ${BRAND.name}.`)}
+                  {...(signup ? {} : { target: "_blank", rel: "noreferrer" })}
+                >
+                  <span>{signup ? "Probar 14 días gratis" : `Quiero el plan ${p.name}`}</span>
+                  <Icon name="right" size={16} />
+                </a>
               </article>
             ))}
           </div>
@@ -138,11 +151,14 @@ export default async function Home() {
             <div className="extras-grid">
               <div className="extra">
                 <h4>Packs de recordatorios</h4>
-                <p>Salen desde el WhatsApp de {BRAND.name}. Sin configurar nada.</p>
+                <p>Salen desde el WhatsApp de {BRAND.name}. Sin configurar nada. Pago único, no vencen. El plan Clínica ya trae 500 por mes.</p>
                 <ul>
                   {WHATSAPP_EXTRAS.packs.map((p) => (
                     <li key={p.reminders}>
-                      <span>{p.reminders.toLocaleString("es-AR")} recordatorios</span>
+                      <span className="pack-name">
+                        {p.reminders.toLocaleString("es-AR")} recordatorios
+                        <small>{p.fits} · ${pricePerReminder(p)} c/u</small>
+                      </span>
                       <b>${p.price}</b>
                     </li>
                   ))}
@@ -182,15 +198,50 @@ export default async function Home() {
         </section>
       </div>
 
-      <footer className="footer">
-        <span className="row" style={{ gap: 8 }}>
-          <Logo size={22} /> {BRAND.name} · Hecho en {BRAND.city}
-        </span>
-        <span className="row" style={{ gap: 18 }}>
-          <Link href="/login">Ingresar</Link>
-          <a href="#precios">Precios</a>
-          <a href={wa} target="_blank" rel="noreferrer">WhatsApp</a>
-        </span>
+      <footer className="site-footer">
+        <div className="sf-top">
+          <div className="sf-brand">
+            <span className="row" style={{ gap: 10 }}>
+              <Logo size={28} /> <strong>{BRAND.name}</strong>
+            </span>
+            <p>La agenda de tu consultorio con recordatorios por WhatsApp. Menos ausencias, más pacientes atendidos.</p>
+            <span className="sf-made"><Icon name="pin" size={14} /> Hecho en {BRAND.city}</span>
+          </div>
+          <nav className="sf-col" aria-label="Producto">
+            <h4>Producto</h4>
+            <a href="#como-funciona">Cómo funciona</a>
+            <a href="#precios">Precios</a>
+            {signup && !user ? <Link href="/registro">Probar 14 días gratis</Link> : null}
+            <Link href={user ? "/panel/agenda" : "/login"}>{user ? "Mi agenda" : "Ingresar"}</Link>
+          </nav>
+          <nav className="sf-col" aria-label="Contacto">
+            <h4>Contacto</h4>
+            <a href={wa} target="_blank" rel="noreferrer"><Icon name="whatsapp" size={15} /> WhatsApp de ventas</a>
+            <a href={`mailto:${DEV.email}`}><Icon name="mail" size={15} /> {DEV.email}</a>
+          </nav>
+        </div>
+
+        <div className="sf-dev">
+          <span className="dev-badge"><Icon name="code" size={14} /> DEV</span>
+          <div className="dev-text">
+            <span>Sistema desarrollado por</span>
+            <strong>{DEV.name}</strong>
+            <small>{DEV.role} · {DEV.city}</small>
+          </div>
+          <div className="dev-links">
+            <a href={`https://wa.me/${DEV.whatsapp}?text=${encodeURIComponent("Hola Luciano! Vi TurnoClaro y quería consultarte por un desarrollo.")}`} target="_blank" rel="noreferrer" aria-label="WhatsApp del desarrollador"><Icon name="whatsapp" size={16} /></a>
+            <a href={`mailto:${DEV.email}`} aria-label="Email del desarrollador"><Icon name="mail" size={16} /></a>
+            {DEV.github ? <a href={DEV.github} target="_blank" rel="noreferrer">GitHub</a> : null}
+            {DEV.linkedin ? <a href={DEV.linkedin} target="_blank" rel="noreferrer">LinkedIn</a> : null}
+            {DEV.instagram ? <a href={DEV.instagram} target="_blank" rel="noreferrer">Instagram</a> : null}
+            {DEV.portfolio ? <a href={DEV.portfolio} target="_blank" rel="noreferrer"><Icon name="link" size={16} /> Portfolio</a> : null}
+          </div>
+        </div>
+
+        <div className="sf-bottom">
+          <span>© {new Date().getFullYear()} {BRAND.name}. Todos los derechos reservados.</span>
+          <span className="sf-code">&lt;/&gt; con dedicación desde el norte argentino</span>
+        </div>
       </footer>
     </>
   );

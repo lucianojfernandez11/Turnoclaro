@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 /**
  * Abre WhatsApp con el mensaje escrito y, en paralelo, registra el envío manual.
@@ -94,4 +94,31 @@ export function AutoSubmitDate({ name, defaultValue, label }: { name: string; de
       }}
     />
   );
+}
+
+/**
+ * Recuerda qué tarjetas desplegables (<details data-remember="id">) dejó abiertas
+ * la secretaria, así al cambiar de día siguen abiertas las mismas agendas.
+ */
+export function RememberOpen({ storageKey }: { storageKey: string }) {
+  useEffect(() => {
+    let saved: string[] = [];
+    try {
+      saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+    } catch {}
+    const all = Array.from(document.querySelectorAll<HTMLDetailsElement>("details[data-remember]"));
+    for (const d of all) if (saved.includes(d.dataset.remember!)) d.open = true;
+    const onToggle = () => {
+      const open = all.filter((d) => d.open).map((d) => d.dataset.remember!);
+      const closed = all.filter((d) => !d.open).map((d) => d.dataset.remember!);
+      const next = Array.from(new Set([...saved.filter((id) => !closed.includes(id)), ...open]));
+      saved = next;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {}
+    };
+    all.forEach((d) => d.addEventListener("toggle", onToggle));
+    return () => all.forEach((d) => d.removeEventListener("toggle", onToggle));
+  }, [storageKey]);
+  return null;
 }

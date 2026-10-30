@@ -23,24 +23,28 @@ Sistema de turnos para consultorios y clínicas: agenda por profesional, recorda
 - **WhatsApp Cloud API** de Meta para el envío automático.
 - Sin otras dependencias: fechas, zonas horarias, CSV y validaciones están escritos a mano y tienen pruebas (`npm test`).
 
-## Uso diario en tu compu (Windows)
+## Uso diario en tu compu (desde la terminal de VS Code)
 
-| Archivo | Para qué |
+Abrí la carpeta del proyecto en VS Code y la terminal con **Ctrl + ñ**.
+
+| Comando | Para qué |
 | --- | --- |
-| `INICIAR.bat` | Prende TurnoClaro y abre el navegador en http://localhost:3000/login. Si quedó uno abierto, lo apaga y limpia la caché antes de arrancar |
-| `APAGAR.bat` | Apaga TurnoClaro del todo |
-| `DEMO-AL-DIA.bat` | Vuelve a crear el consultorio de demostración con turnos alrededor de hoy (usalo antes de cada reunión de venta) |
+| `npm run dev` | Prende TurnoClaro en http://localhost:3000 (dejá la terminal abierta) |
+| **Ctrl + C** | Lo apaga (si pregunta, respondé `S`) |
+| `npm run db:migrate` | Actualiza las tablas de la base cuando hay cambios en `prisma/` |
+| `npm install` | Instala las librerías (solo si cambió `package.json`) |
+| `.\DEMO-AL-DIA.bat` o `npm run db:seed` | Recrea el consultorio de demostración con turnos alrededor de hoy |
 
 Ingreso de prueba: `demo@turnoclaro.com` / `demo1234` (administración) y `secretaria@turnoclaro.com` / `demo1234` (secretaría). Tu superadmin es el email y la contraseña de `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` en `.env`.
 
-Después de recibir archivos nuevos, hacé **APAGAR.bat** y después **INICIAR.bat** para que tome todos los cambios.
+Si dice que el puerto 3000 está ocupado, quedó otra terminal con el sistema prendido: cerrala con Ctrl + C (o con el tachito de la terminal). Si la página muestra errores raros después de recibir archivos nuevos, apagalo, borrá la carpeta `.next` y volvé a correr `npm run dev`.
 
 ## Instalación desde cero (otra compu)
 
 Necesitás **Node.js 20 o más nuevo** y una base **PostgreSQL** (gratis en [Neon](https://neon.tech): creás un proyecto, tocás **Connect**, apagás "Connection pooling" y copiás la conexión).
 
 1. Copiá `.env.example` como `.env` y completá `DATABASE_URL`, `SUPERADMIN_EMAIL` y `SUPERADMIN_PASSWORD`.
-2. Doble clic en `INICIAR.bat` (instala, crea las tablas, carga la demo y arranca). O a mano:
+2. En la terminal:
 
    ```bash
    npm install

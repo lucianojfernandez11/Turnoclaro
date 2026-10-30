@@ -97,9 +97,22 @@ model User {
   lastLoginAt  DateTime? @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
 
-  memberships Membership[]
-  sessions    Session[]
-  auditLogs   AuditLog[]
+  memberships    Membership[]
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  passwordResets PasswordReset[]
+}
+
+// Link de "olvidé mi contraseña": id = sha256 del token que viaja en el email. Vence en 1 hora y se usa una sola vez.
+model PasswordReset {
+  id        String    @id
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([userId])
 }
 
 model Membership {

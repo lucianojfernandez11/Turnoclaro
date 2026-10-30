@@ -26,8 +26,8 @@ export default function SignupPage() {
         <Field label="Email">
           <input name="email" type="email" required autoComplete="email" />
         </Field>
-        <Field label="Teléfono del consultorio" hint="Opcional">
-          <input name="phone" type="tel" />
+        <Field label="Teléfono del consultorio" hint="Opcional. Con característica, ej. 381 555-1234">
+          <input name="phone" type="tel" inputMode="tel" pattern="[0-9 +()\-]{6,20}" title="Solo números, por ejemplo 381 555-1234" placeholder="381 555-1234" autoComplete="tel" />
         </Field>
         <Field label="Contraseña" hint="Mínimo 8 caracteres">
           <input name="password" type="password" required minLength={8} autoComplete="new-password" />

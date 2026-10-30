@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/password";
 import { type ActionState, isEmail, slugify, str } from "@/lib/forms";
+import { emailLayout, sendEmail } from "@/lib/email";
+import { appUrl } from "@/lib/reminders";
+import { firstName } from "@/lib/template";
+import { normalizeArPhone } from "@/lib/phone";
 
 const MAX_FAILS = 5;
 const LOCK_MINUTES = 15;
@@ -77,6 +81,7 @@ export async function signupAction(_prev: ActionState, fd: FormData): Promise<Ac
   if (!isEmail(email)) return { error: "El email no es válido." };
   const pwProblem = passwordProblem(password);
   if (pwProblem) return { error: pwProblem };
+  if (phone && !normalizeArPhone(phone)) return { error: "El teléfono no es válido. Escribilo con característica, por ejemplo 381 555-1234, o dejalo vacío." };
   if (await prisma.user.findUnique({ where: { email } })) {
     return { error: "Ya existe una cuenta con ese email. Ingresá desde “Ingresar”." };
   }
@@ -100,6 +105,23 @@ export async function signupAction(_prev: ActionState, fd: FormData): Promise<Ac
     await tx.membership.create({ data: { userId: user.id, clinicId: clinic.id, role: "ADMIN" } });
     return { user, clinic };
   });
+
+  // Email de bienvenida: si falla, no frena el registro.
+  await sendEmail({
+    to: email,
+    subject: `Bienvenido a TurnoClaro, ${firstName(name)}`,
+    text: `Hola ${firstName(name)}: ya creaste ${clinicName} en TurnoClaro. Tenés 14 días gratis. Primer paso: cargá tus profesionales y sus horarios en ${appUrl()}/panel/ajustes/profesionales. Tu link de reservas online: ${appUrl()}/r/${clinic.slug}`,
+    html: emailLayout({
+      title: `¡Bienvenido, ${firstName(name)}!`,
+      paragraphs: [
+        `Ya creaste ${clinicName} en TurnoClaro. Tenés 14 días gratis para probar todo, sin tarjeta.`,
+        "Primer paso: cargá a los profesionales y sus horarios. Después ya podés dar turnos y mandar recordatorios por WhatsApp.",
+        `Tu link para que los pacientes reserven solos: ${appUrl()}/r/${clinic.slug}`,
+      ],
+      button: { label: "Cargar profesionales", url: `${appUrl()}/panel/ajustes/profesionales` },
+      footnote: "¿Dudas? Respondé este email o escribinos por WhatsApp y te ayudamos a dejarlo andando.",
+    }),
+  }).catch(() => undefined);
 
   await createSession(user.id, clinic.id);
   redirect("/panel/ajustes/profesionales?bienvenida=1");

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Sistema de turnos para consultorios: agenda, recordatorios por WhatsApp y reserva online.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
     "postinstall": "prisma generate",

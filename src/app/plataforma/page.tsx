@@ -15,22 +15,24 @@ export default async function PlataformaPage() {
   const user = await getCurrentUser();
   if (!user?.isSuperadmin) redirect("/login");
   const monthAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-  const clinics = await prisma.clinic.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { professionals: true, patients: true, memberships: true } },
-    },
-  });
-  const usage = await prisma.appointment.groupBy({
-    by: ["clinicId"],
-    where: { createdAt: { gt: monthAgo } },
-    _count: { _all: true },
-  });
-  const msgs = await prisma.message.groupBy({
-    by: ["clinicId"],
-    where: { createdAt: { gt: monthAgo }, channel: "API", status: { not: "FALLIDO" } },
-    _count: { _all: true },
-  });
+  const [clinics, usage, msgs] = await Promise.all([
+    prisma.clinic.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { professionals: true, patients: true, memberships: true } },
+      },
+    }),
+    prisma.appointment.groupBy({
+      by: ["clinicId"],
+      where: { createdAt: { gt: monthAgo } },
+      _count: { _all: true },
+    }),
+    prisma.message.groupBy({
+      by: ["clinicId"],
+      where: { createdAt: { gt: monthAgo }, channel: "API", status: { not: "FALLIDO" } },
+      _count: { _all: true },
+    }),
+  ]);
 
   return (
     <main className="main" style={{ maxWidth: 1100, margin: "0 auto" }}>

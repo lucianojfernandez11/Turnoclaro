@@ -20,22 +20,22 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
   const apptWhere: Prisma.AppointmentWhereInput = canSeeAllAgendas(user)
     ? {}
     : { professionalId: user.professionalId ?? "__ninguno__" };
-  const p = await prisma.patient.findFirst({
-    where: { id, clinicId: user.clinic.id, deletedAt: null },
-    include: {
-      appointments: {
-        where: apptWhere,
-        include: { professional: true },
-        orderBy: { startsAt: "desc" },
-        take: 100,
+  const [p, allInsurances] = await Promise.all([
+    prisma.patient.findFirst({
+      where: { id, clinicId: user.clinic.id, deletedAt: null },
+      include: {
+        appointments: {
+          where: apptWhere,
+          include: { professional: true },
+          orderBy: { startsAt: "desc" },
+          take: 100,
+        },
       },
-    },
-  });
+    }),
+    prisma.insurance.findMany({ where: { clinicId: user.clinic.id }, orderBy: { name: "asc" } }),
+  ]);
   if (!p) notFound();
-  const insurances = await prisma.insurance.findMany({
-    where: { clinicId: user.clinic.id, OR: [{ active: true }, { id: p.insuranceId ?? "__ninguna__" }] },
-    orderBy: { name: "asc" },
-  });
+  const insurances = allInsurances.filter((i) => i.active || i.id === p.insuranceId);
   const done = p.appointments.filter((a) => a.status === "ATENDIDO").length;
   const absent = p.appointments.filter((a) => a.status === "AUSENTE").length;
 

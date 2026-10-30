@@ -1,6 +1,7 @@
 import type { AppointmentStatus } from "@prisma/client";
 import { STATUS_LABEL } from "@/lib/labels";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Glass } from "./glass";
 
 export function StatusBadge({ status }: { status: AppointmentStatus }) {
@@ -43,12 +44,14 @@ export function PanelHero({
   subtitle,
   actions,
   chips,
+  quote,
 }: {
+  quote?: string;
   eyebrow?: string;
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  chips?: { value: ReactNode; label: string; tone?: "lime" | "plain" }[];
+  chips?: { value: ReactNode; label: string; tone?: "lime" | "plain"; href?: string; active?: boolean; hint?: string }[];
 }) {
   return (
     <header className="frame panel-hero">
@@ -58,15 +61,34 @@ export function PanelHero({
           {eyebrow ? <span className="tag">{eyebrow}</span> : null}
           <h1>{title}</h1>
           {subtitle ? <p>{subtitle}</p> : null}
+          {quote ? (
+            <blockquote className="hero-quote">
+              <span aria-hidden="true">✦</span> {quote}
+            </blockquote>
+          ) : null}
         </div>
         {actions ? <div className="page-actions">{actions}</div> : null}
       </div>
       {chips && chips.length ? (
         <ul className="hero-chips">
           {chips.map((c, i) => (
-            <li key={c.label} className={c.tone === "lime" ? "is-lime" : undefined} style={{ "--i": i } as React.CSSProperties}>
-              <b>{c.value}</b>
-              <span>{c.label}</span>
+            <li
+              key={c.label}
+              className={[c.tone === "lime" ? "is-lime" : "", c.href ? "is-link" : "", c.active ? "is-active" : ""].filter(Boolean).join(" ") || undefined}
+              style={{ "--i": i } as React.CSSProperties}
+            >
+              {c.href ? (
+                <Link href={c.href} scroll={false} aria-current={c.active ? "true" : undefined}>
+                  <b>{c.value}</b>
+                  <span>{c.label}</span>
+                  <em aria-hidden="true">{c.active ? "Cerrar" : c.hint ?? "Ver"} →</em>
+                </Link>
+              ) : (
+                <>
+                  <b>{c.value}</b>
+                  <span>{c.label}</span>
+                </>
+              )}
             </li>
           ))}
         </ul>

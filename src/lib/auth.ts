@@ -61,15 +61,13 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
-  const session = await prisma.session.findUnique({
-    where: { id: sha256(token) },
-    include: { user: true, clinic: true },
-  });
+  const id = sha256(token);
+  // Sesión y permiso se piden juntos: es la consulta que corre en cada pantalla.
+  const [session, membership] = await Promise.all([
+    prisma.session.findUnique({ where: { id }, include: { user: true, clinic: true } }),
+    prisma.membership.findFirst({ where: { user: { sessions: { some: { id } } }, clinic: { sessions: { some: { id } } } } }),
+  ]);
   if (!session || session.expiresAt < new Date()) return null;
-
-  const membership = await prisma.membership.findUnique({
-    where: { userId_clinicId: { userId: session.userId, clinicId: session.clinicId } },
-  });
   if (!membership && !session.user.isSuperadmin) return null;
 
   const c = session.clinic;
