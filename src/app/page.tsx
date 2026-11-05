@@ -42,10 +42,19 @@ export default async function Home() {
               La agenda de tu consultorio con recordatorios por WhatsApp. El paciente confirma o cancela con un toque y el
               horario queda libre para otro.
             </p>
-            <a className="cta tag" href={primaryHref} {...(primaryHref.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>
-              <span className="cta-label">{primaryLabel}</span>
-              <span className="cta-arrow"><Icon name="right" /></span>
-            </a>
+            <div className="hero-ctas">
+              <a className="cta tag" href={primaryHref} {...(primaryHref.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>
+                <span className="cta-label">{primaryLabel}</span>
+                <span className="cta-arrow"><Icon name="right" /></span>
+              </a>
+              {!user ? (
+                <form action="/demo" method="post">
+                  <button type="submit" className="btn btn-glass demo-btn">
+                    <Icon name="agenda" size={16} /> Ver la demo
+                  </button>
+                </form>
+              ) : null}
+            </div>
           </div>
         </section>
       </div>
@@ -193,6 +202,11 @@ export default async function Home() {
               <Link className="btn" href="/registro" style={{ background: "rgba(255,255,255,.85)", borderColor: "transparent" }}>
                 Crear cuenta gratis
               </Link>
+            ) : null}
+            {!user ? (
+              <form action="/demo" method="post">
+                <button type="submit" className="btn btn-glass">Ver la demo</button>
+              </form>
             ) : null}
           </div>
         </section>

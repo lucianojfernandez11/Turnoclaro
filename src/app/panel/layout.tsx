@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireUser, canManageSettings, canSeeAllAgendas, ROLE_LABEL } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { requireUser, canManageSettings, canSeeAllAgendas, ROLE_LABEL, DEMO_FLASH_COOKIE } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { NavLinks, type NavItem } from "@/components/nav";
 import { Icon, Logo } from "@/components/icons";
@@ -33,9 +34,27 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     ? Math.ceil((user.clinic.trialEndsAt.getTime() - Date.now()) / (24 * 3600 * 1000))
     : null;
 
+  const demoBlocked = user.isDemo && (await cookies()).get(DEMO_FLASH_COOKIE)?.value === "1";
+  const signupOpen = process.env.SIGNUP_ENABLED !== "false";
+
   return (
     <>
-      {user.isSuperadmin ? (
+      {user.isDemo ? (
+        <div className={`banner banner-demo${demoBlocked ? " is-blocked" : ""}`} role={demoBlocked ? "alert" : undefined}>
+          <span className="demo-pill">DEMO</span>
+          <span>
+            {demoBlocked
+              ? "Esto es una demo: ese cambio no se guarda. Creá tu cuenta gratis para usarlo con tu consultorio."
+              : "Estás recorriendo un consultorio de ejemplo. Mirá todo lo que quieras: los cambios no se guardan."}
+          </span>
+          <span className="banner-actions">
+            {signupOpen ? <Link className="demo-cta" href="/registro">Probar 14 días gratis →</Link> : null}
+            <form action={logoutAction}>
+              <button type="submit" className="demo-exit">Salir de la demo</button>
+            </form>
+          </span>
+        </div>
+      ) : user.isSuperadmin ? (
         <div className="banner">
           <span>
             Modo soporte en <strong>{user.clinic.name}</strong>

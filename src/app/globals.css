@@ -962,3 +962,17 @@ tbody tr:hover { background: rgba(227, 236, 229, 0.45); }
 /* Login: link para recuperar la contraseña */
 .forgot-link { justify-self: end; margin-top: -6px; font-size: 13.5px; color: var(--pine); text-decoration: none; }
 .forgot-link:hover { text-decoration: underline; }
+
+/* Demo pública */
+.hero-ctas { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+.demo-btn { min-height: 44px; border-radius: 12px; gap: 8px; }
+.banner-demo { position: sticky; top: 0; z-index: 50; background: var(--ink); color: #dfe8e3; justify-content: space-between; }
+.banner-demo.is-blocked { background: var(--lime); color: var(--lime-ink); }
+.demo-pill { padding: 3px 8px; border-radius: 6px; background: var(--lime); color: var(--lime-ink); font: 600 11px/1.2 var(--f-mono); letter-spacing: .12em; }
+.banner-demo.is-blocked .demo-pill { background: var(--ink); color: var(--lime); }
+.banner-demo > span:nth-child(2) { flex: 1; min-width: 220px; }
+.banner-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.banner-demo .demo-cta { padding: 6px 12px; border-radius: 10px; background: var(--lime); color: var(--lime-ink); text-decoration: none; font-weight: 600; }
+.banner-demo.is-blocked .demo-cta { background: var(--ink); color: #fff; }
+.banner-demo .demo-exit { padding: 6px 12px; border-radius: 10px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; opacity: .8; }
+.banner-demo .demo-exit:hover { opacity: 1; }

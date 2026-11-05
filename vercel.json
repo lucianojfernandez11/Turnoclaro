@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/recordatorios", "schedule": "0 22 * * *" }
+    { "path": "/api/cron/recordatorios", "schedule": "0 22 * * *" },
+    { "path": "/api/cron/demo", "schedule": "0 7 * * *" }
   ]
 }

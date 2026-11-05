@@ -3,7 +3,7 @@
  * La cookie guarda un token al azar; en la base se guarda solo su hash (SHA-256),
  * así una copia de la base no alcanza para entrar como otro usuario.
  */
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { Role } from "@prisma/client";
@@ -19,6 +19,8 @@ export type CurrentUser = {
   name: string;
   email: string;
   isSuperadmin: boolean;
+  /** Visitante de la demo pública: solo lectura. */
+  isDemo: boolean;
   role: Role;
   professionalId: string | null;
   clinic: {
@@ -35,10 +37,13 @@ export type CurrentUser = {
   };
 };
 
-export async function createSession(userId: string, clinicId: string): Promise<void> {
+export const DEMO_FLASH_COOKIE = "tc_demo_aviso";
+const DEMO_HOURS = 3;
+
+export async function createSession(userId: string, clinicId: string, opts: { demo?: boolean } = {}): Promise<void> {
   const token = randomToken();
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 3600 * 1000);
-  await prisma.session.create({ data: { id: sha256(token), userId, clinicId, expiresAt } });
+  const expiresAt = new Date(Date.now() + (opts.demo ? DEMO_HOURS * 3600 * 1000 : SESSION_DAYS * 24 * 3600 * 1000));
+  await prisma.session.create({ data: { id: sha256(token), userId, clinicId, expiresAt, isDemo: Boolean(opts.demo) } });
   const jar = await cookies();
   jar.set(COOKIE, token, {
     httpOnly: true,
@@ -68,6 +73,21 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     prisma.membership.findFirst({ where: { user: { sessions: { some: { id } } }, clinic: { sessions: { some: { id } } } } }),
   ]);
   if (!session || session.expiresAt < new Date()) return null;
+
+  // Demo pública: cualquier intento de guardar (acción del servidor) se frena acá,
+  // vuelve a la misma pantalla y muestra el aviso "en la demo no se guardan cambios".
+  if (session.isDemo) {
+    const h = await headers();
+    if (h.get("next-action")) {
+      jar.set(DEMO_FLASH_COOKIE, "1", { path: "/", maxAge: 10, httpOnly: true, sameSite: "lax" });
+      let back = "/panel/agenda";
+      try {
+        const ref = new URL(h.get("referer") ?? "");
+        if (ref.pathname.startsWith("/panel")) back = ref.pathname + ref.search;
+      } catch {}
+      redirect(back);
+    }
+  }
   if (!membership && !session.user.isSuperadmin) return null;
 
   const c = session.clinic;
@@ -77,6 +97,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     name: session.user.name,
     email: session.user.email,
     isSuperadmin: session.user.isSuperadmin,
+    isDemo: session.isDemo,
     // El superadmin que entra a dar soporte actúa como administrador.
     role: membership?.role ?? "ADMIN",
     professionalId: membership?.professionalId ?? null,

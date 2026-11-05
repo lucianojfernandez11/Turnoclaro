@@ -27,6 +27,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <Link className="forgot-link" href="/olvide">¿Olvidaste tu contraseña?</Link>
         <SubmitButton className="btn btn-primary">Ingresar</SubmitButton>
       </ActionForm>
+      <p className="muted small">
+        ¿Querés verlo antes? <a href="/demo">Mirá la demo</a> sin registrarte.
+      </p>
       {process.env.SIGNUP_ENABLED !== "false" ? (
         <p className="muted">
           ¿Todavía no tenés cuenta? <Link href="/registro">Probá 14 días gratis</Link>

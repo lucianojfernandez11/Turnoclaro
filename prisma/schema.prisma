@@ -136,6 +136,8 @@ model Session {
   clinicId  String
   expiresAt DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+  // Sesión de la demo pública (/demo): puede mirar todo pero no guardar cambios.
+  isDemo    Boolean  @default(false)
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
